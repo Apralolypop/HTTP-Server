@@ -3,6 +3,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <string.h>
 
 int main() {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0); // AF_INET decides if the socket is IPv4 or IPv6
@@ -48,7 +49,7 @@ int main() {
 
     
     std::cout << "Listening on 127.0.0.1:8080\n";
-    /*
+    
 
     sockaddr_in client_address{}; //creates another sockaddr_in structure
     socklen_t client_length = sizeof(client_address); 
@@ -66,9 +67,53 @@ int main() {
 
     std::cout << "Client connected\n";
 
-    close(client_fd);
-    */
 
+    //recv(client_fd, buffer, sizeof(buffer), 0) receives data from client
+    //send(client_fd, buffer, sizeof(buffer), 0) sends data to client
+    //
+
+    while(true){
+
+
+        char buffer[25];
+
+        ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);  // >0 receives bytes, 0 connection close, <0 error
+        //NOTE The received buffer also receive '\n'
+
+        if(bytes_received == -1) {
+            std::cerr << "recv failed\n";
+            close(client_fd);
+            close(server_fd);
+            return 1;
+        }else if(bytes_received == 0) {
+            std::cout << "Client disconnected\n";
+            close(client_fd);
+            close(server_fd);
+            return 0;
+        }else {
+            buffer[bytes_received] = '\0'; // Null-terminate the buffer to make it a valid C-string
+            std::cout << "Received " << bytes_received << " bytes: ";
+            std::cout.write(buffer, bytes_received); //writes bytes_received bytes since the bytes sent doesn't have a '\0' at the end
+            std::cout << std::endl;
+
+            if(strcmp(buffer, "terminate") == 0){ //THIS DOESNT WORK BECAUSE NC SEND SOME THINGS after terminate
+                std::cout << "Exiting...\n";
+                break;
+            }
+
+            ssize_t bytes_sent = send(client_fd, buffer, bytes_received, 0);  // >0 sends bytes, 0 connection close, <0 error
+
+            if (bytes_sent == -1) {
+                perror("send"); // Print the error message 
+                break;
+            }
+        }
+    
+
+    }
+
+
+/* 
     while (true) {
     sockaddr_in client_address{};
     socklen_t client_length = sizeof(client_address);
@@ -88,6 +133,8 @@ int main() {
 
     close(client_fd);
 }
+*/
+    close(client_fd);
     close(server_fd);
     return 0;
 }

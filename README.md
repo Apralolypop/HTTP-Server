@@ -1,1 +1,1 @@
-Nothing for now, This is a http server for learning. Idk
+Nothing for now, I am making a server for learning purposes
