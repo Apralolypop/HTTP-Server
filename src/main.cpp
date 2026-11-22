@@ -1,9 +1,76 @@
-#include <arpa/inet.h>
-#include <iostream>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <string.h>
+#include <arpa/inet.h>                  //Used for converting str to IP address
+#include <iostream>                     
+#include <netinet/in.h>                 //address structure
+#include <sys/socket.h>                 //socket() functions
+#include <unistd.h>                     //close()
+#include <string.h>                     //strerror()
+#include <cerrno>                       //Used for EINTR
+#include <optional>                     //optional<T> data type that returns T or std::nullopt if invalid
+
+// Header includes
+#include "http_parser.h"
+
+// Macro definitions
+#define MAX_HEADER_SIZE 16384 // 16kb
+
+// Data declarations
+
+// Data definitions
+
+// Function declarations
+
+std::string read_request(int client_fd);
+
+// Function definitions
+
+// read_request reads the HTTP request and transforms it into a string
+std::string read_request(int client_fd){
+    std::string str = "";
+
+    char buffer[1024];
+
+    ssize_t bytes_received;
+
+    while(true){
+        bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);  // >0 receives bytes, 0 connection close, <0 error
+
+        if(bytes_received == -1) {
+            std::cerr << "recv failed\n";
+
+            if(errno == EINTR) {
+                continue;
+            }
+            return ""; // This returns 2 "\0", {"\0", "\0"}
+        }else if(bytes_received == 0) {
+            std::cout << "Client disconnected\n";
+            return ""; // This returns 2 "\0", {"\0", "\0"}
+        }else {
+            std::cout << "read_request received " << bytes_received << " bytes: ";
+            std::cout.write(buffer, bytes_received); //writes bytes_received bytes since the bytes sent doesn't have a '\0' at the end
+            std::cout << std::endl;
+
+            str.append(buffer, bytes_received); 
+        }
+
+        if(str.size() > MAX_HEADER_SIZE){
+            std::cerr << "HTTP headers too large";
+            close(client_fd);
+            return "";
+        }
+
+        //Checks if the string ends with \r\n\r\n
+        if(str.size() >= 4 && "\r\n\r\n" == str.substr(str.size() - 4)){
+            break;
+        }
+
+
+    }
+
+    return str;
+}
+
+
+// Main
 
 int main() {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0); // AF_INET decides if the socket is IPv4 or IPv6
@@ -134,6 +201,18 @@ int main() {
     close(client_fd);
 }
 */
+
+
+/*
+An HHTP request looks like this:
+GET / HTTP/1.1
+Host: 127.0.0.1:8080
+User-Agent: curl/8.x
+*/ //Accept: */* without */ //
+
+
+
+
     close(client_fd);
     close(server_fd);
     return 0;
