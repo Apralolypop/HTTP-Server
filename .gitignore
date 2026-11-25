@@ -1,4 +1,7 @@
 
+## Ignore Visual Studio Code settings folder
+.vscode/
+
 # Compiled object files and executables
 *.o
 *.out
