@@ -1,6 +1,7 @@
 #include "file_handler.h"
 #include <fstream>
 #include <sstream>
+#include <iostream>
 
 std::string read_file(const std::string& filepath) {
     std::ifstream file(filepath);
