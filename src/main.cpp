@@ -12,6 +12,7 @@
 #include "http/http_response.h"
 #include "filesys/path_resolver.h"
 #include "filesys/file_handler.h"
+#include "router/routing.h"
 
 // Macro definitions
 #define MAX_HEADER_SIZE 16384 // 16kb
@@ -165,7 +166,7 @@ int main() {
         std::cout << "Path: " << request->path << std::endl;
         std::cout << "Version: " << request->version << std::endl;
 
-        std::string file_content = read_file(resolve_path(request->path));
+        std::string file_content = read_file(resolve_path(routing_path(request->path)));
 
         std::string response = build_response(200, "OK", "Hello, World!\n" + file_content);
 
