@@ -8,7 +8,10 @@
 #include <optional>                     //optional<T> data type that returns T or std::nullopt if invalid
 
 // Header includes
-#include "http_parser.h"
+#include "http/http_parser.h"
+#include "http/http_response.h"
+#include "filesys/path_resolver.h"
+#include "filesys/file_handler.h"
 
 // Macro definitions
 #define MAX_HEADER_SIZE 16384 // 16kb
@@ -139,46 +142,35 @@ int main() {
     //send(client_fd, buffer, sizeof(buffer), 0) sends data to client
     //
 
-    while(true){
 
-
-        char buffer[25];
-
-        ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);  // >0 receives bytes, 0 connection close, <0 error
-        //NOTE The received buffer also receive '\n'
-
-        if(bytes_received == -1) {
-            std::cerr << "recv failed\n";
-            close(client_fd);
-            close(server_fd);
-            return 1;
-        }else if(bytes_received == 0) {
-            std::cout << "Client disconnected\n";
-            close(client_fd);
-            close(server_fd);
-            return 0;
-        }else {
-            buffer[bytes_received] = '\0'; // Null-terminate the buffer to make it a valid C-string
-            std::cout << "Received " << bytes_received << " bytes: ";
-            std::cout.write(buffer, bytes_received); //writes bytes_received bytes since the bytes sent doesn't have a '\0' at the end
-            std::cout << std::endl;
-
-            if(strcmp(buffer, "terminate") == 0){ //THIS DOESNT WORK BECAUSE NC SEND SOME THINGS after terminate
-                std::cout << "Exiting...\n";
-                break;
-            }
-
-            ssize_t bytes_sent = send(client_fd, buffer, bytes_received, 0);  // >0 sends bytes, 0 connection close, <0 error
-
-            if (bytes_sent == -1) {
-                perror("send"); // Print the error message 
-                break;
-            }
-        }
-    
-
+    std::string response = read_request(client_fd);
+    if(response.empty()){
+        std::cerr << "read_request failed\n";
+        close(client_fd);
+        close(server_fd);
+        return 1;
     }
+    
+    std::optional<HTTPRequest> request = parse_request(response);
+    if(!request.has_value()){
+        std::cerr << "parse_request failed\n";
+        close(client_fd);
+        close(server_fd);
+        return 1;
+    }
+    else{
+        
+        std::cout << "Parsed request: " << std::endl;
+        std::cout << "Method: " << request->method << std::endl;
+        std::cout << "Path: " << request->path << std::endl;
+        std::cout << "Version: " << request->version << std::endl;
 
+        std::string file_content = read_file(resolve_path(request->path));
+
+        std::string response = build_response(200, "OK", "Hello, World!\n" + file_content);
+
+        send(client_fd, response.c_str(), response.length(), 0);
+    }
 
 /* 
     while (true) {
